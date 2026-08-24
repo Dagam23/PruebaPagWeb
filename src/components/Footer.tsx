@@ -1,5 +1,5 @@
 import { Mail, Phone, MapPin } from "lucide-react";
-import { FaLinkedin, FaInstagram, FaYoutube } from "react-icons/fa";
+import { FaFacebook, FaInstagram, FaYoutube } from "react-icons/fa";
 
 const Footer = () => (
   <footer className="gradient-nature text-primary-foreground mt-20">

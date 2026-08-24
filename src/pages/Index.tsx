@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Droplets, Fish, Leaf, Sun, Target, Eye } from "lucide-react";
+import { ArrowRight, Droplets, Fish, Leaf, Sun, Target, Eye, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import heroImg from "@/assets/hero-aquaponics.jpg";
@@ -28,10 +28,17 @@ const modules = [
   },
   {
     title: "Simulación y Métricas",
-    desc: "Calcula requerimientos y monitorea métricas en tiempo real.",
+    desc: "Calcula requerimientos y dimensiones óptimas para tu prototipo.",
     icon: <Droplets className="h-8 w-8" />,
     path: "/simulacion",
     color: "from-primary to-accent",
+  },
+  {
+    title: "Monitoreo en Tiempo Real",
+    desc: "Supervisa los datos de telemetría IoT y controla los actuadores del sistema.",
+    icon: <Activity className="h-8 w-8" />,
+    path: "/monitoreo",
+    color: "from-accent to-secondary",
   },
 ];
 
@@ -112,7 +119,7 @@ const Index = () => (
     {/* Modules */}
     <section className="container py-20">
       <h2 className="font-display text-3xl font-bold text-center mb-12 text-foreground">Módulos Educativos</h2>
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
         {modules.map((mod, i) => (
           <motion.div key={mod.path} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
             <Link to={mod.path} className="glass-card p-8 flex flex-col h-full group hover:shadow-nature transition-all duration-300 block">

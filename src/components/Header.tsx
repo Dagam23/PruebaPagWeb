@@ -9,6 +9,7 @@ const navItems = [
   { label: "Comparativa", path: "/comparativa" },
   { label: "Minijuego", path: "/juego" },
   { label: "Simulación", path: "/simulacion" },
+  { label: "Monitoreo", path: "/monitoreo" },
 ];
 
 const Header = () => {
