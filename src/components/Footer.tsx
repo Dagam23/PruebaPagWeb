@@ -1,5 +1,5 @@
 import { Mail, Phone, MapPin } from "lucide-react";
-import { FaFacebook, FaInstagram, FaYoutube } from "react-icons/fa";
+import { FaLinkedin, FaInstagram, FaYoutube } from "react-icons/fa";
 
 const Footer = () => (
   <footer className="gradient-nature text-primary-foreground mt-20">
@@ -24,9 +24,9 @@ const Footer = () => (
           <div className="flex gap-3">
             {[
               {
-                name: "Facebook",
-                url: "https://facebook.com/tu_pagina",
-                icon: FaFacebook,
+                name: "LinkedIn",
+                url: "https://www.linkedin.com/company/cemos-acuapon%C3%ADa-uis/",
+                icon: FaLinkedin,
               },
               {
                 name: "Instagram",
