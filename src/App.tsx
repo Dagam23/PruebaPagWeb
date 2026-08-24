@@ -7,7 +7,6 @@ import Index from "./pages/Index";
 import Comparativa from "./pages/Comparativa";
 import Juego from "./pages/Juego";
 import Simulacion from "./pages/Simulacion";
-import Monitoreo from "./pages/Monitoreo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +22,6 @@ const App = () => (
           <Route path="/comparativa" element={<Comparativa />} />
           <Route path="/juego" element={<Juego />} />
           <Route path="/simulacion" element={<Simulacion />} />
-          <Route path="/monitoreo" element={<Monitoreo />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
