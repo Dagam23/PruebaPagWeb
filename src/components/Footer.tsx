@@ -35,7 +35,7 @@ const Footer = () => (
               },
               {
                 name: "YouTube",
-                url: "https://youtube.com/@tu_canal",
+                url: "https://www.youtube.com/watch?v=QL72fPF1Bu0",
                 icon: FaYoutube,
               },
             ].map((social) => {
