@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -6,19 +6,29 @@ import {
   Droplets,
   Wind,
   Fish,
-  Leaf,
   Sun,
   Zap,
   Gauge,
   Waves,
   RefreshCw,
-  Power,
   AlertTriangle,
   CheckCircle2,
   Radio,
+  Cpu,
+  LineChart as ChartIcon,
+  Table as TableIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
+
+// Componentes integrados de la estación de monitoreo
+import { DiagramaSistema, ActuadoresState } from "@/components/simulacion/DiagramaSistema";
+import { PanelLateralControl } from "@/components/simulacion/PanelLateralControl";
+import { GraficasDia } from "@/components/simulacion/GraficasDia";
+import { TablaLecturas } from "@/components/simulacion/TablaLecturas";
+
+// Servicios y constantes
+import { DEFAULT_SETPOINTS, SetpointConfig } from "@/lib/constants";
+import { telemetryService, type Lectura } from "@/services/telemetryService";
 
 interface TelemetryData {
   temperatura: number;
@@ -31,61 +41,87 @@ interface TelemetryData {
   amonio: number;
 }
 
-interface ActuatorState {
-  bombaPrincipal: boolean;
-  oxigenador: boolean;
-  alimentadorAuto: boolean;
-  luzUV: boolean;
-}
-
 const Monitoreo = () => {
-  // Telemetry real-time simulation state
-  const [data, setData] = useState<TelemetryData>({
-    temperatura: 24.8,
-    ph: 7.1,
-    oxigeno: 6.8,
-    nivelAgua: 92,
-    conductividad: 1250,
-    turbidez: 4.2,
-    flujoBomba: 18.5,
-    amonio: 0.15,
+  // 1. Estado de Puntos de Consigna (Setpoints)
+  const [setpoints, setSetpoints] = useState<SetpointConfig>(DEFAULT_SETPOINTS);
+
+  // 2. Estado de Actuadores (conmutables desde el lateral o desde el diagrama)
+  const [actuadores, setActuadores] = useState<ActuadoresState>({
+    bomba: true,
+    aireador: true,
+    alimentador: false,
+    luz: true,
+    calentador: false,
   });
 
+  const handleToggleActuador = (key: keyof ActuadoresState) => {
+    setActuadores((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // 3. Telemetría y flujo dinámico en tiempo real
+  const [datos, setDatos] = useState<Lectura[]>(() =>
+    telemetryService.generarLecturasHistoricas(24, 6, DEFAULT_SETPOINTS)
+  );
+  const [isSimRunning, setIsSimRunning] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [selectedModule, setSelectedModule] = useState<string>("todos");
+  const [vistaCentral, setVistaCentral] = useState<"sensores" | "graficas" | "csv">("sensores");
 
-  // Actuators state
-  const [actuators, setActuators] = useState<ActuatorState>({
-    bombaPrincipal: true,
-    oxigenador: true,
-    alimentadorAuto: false,
-    luzUV: true,
-  });
-
-  // Simulated live IoT data updates
+  // Loop de simulación IoT cada 3.5 segundos con reactividad biológica y física
   useEffect(() => {
-    const updateData = () => {
-      setData({
-        temperatura: +(24 + Math.random() * 2.5).toFixed(1),
-        ph: +(6.8 + Math.random() * 0.8).toFixed(1),
-        oxigeno: +(6.2 + Math.random() * 1.5).toFixed(1),
-        nivelAgua: Math.min(100, Math.max(80, +(90 + (Math.random() * 10 - 5)).toFixed(0))),
-        conductividad: +(1200 + Math.random() * 100).toFixed(0),
-        turbidez: +(3.5 + Math.random() * 1.5).toFixed(1),
-        flujoBomba: +(17.5 + Math.random() * 2).toFixed(1),
-        amonio: +(0.1 + Math.random() * 0.2).toFixed(2),
+    if (!isSimRunning) return;
+
+    const interval = setInterval(() => {
+      setDatos((prev) => {
+        const ultima = prev[prev.length - 1];
+        if (!ultima) return prev;
+        const nueva = telemetryService.generarSiguienteLectura(ultima, setpoints, actuadores);
+        return [...prev.slice(-179), nueva];
       });
+
       const now = new Date();
       setLastUpdated(now.toLocaleTimeString("es-CO"));
-    };
+    }, 3500);
 
-    updateData();
-    const interval = setInterval(updateData, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isSimRunning, setpoints, actuadores]);
 
-  const toggleActuator = (key: keyof ActuatorState) => {
-    setActuators((prev) => ({ ...prev, [key]: !prev[key] }));
+  // Lectura actual instantánea calculada a partir del flujo de telemetría
+  const lecturaActual = useMemo(() => {
+    return (
+      datos[datos.length - 1] ?? {
+        t: Date.now(),
+        temperatura: setpoints.temperatura.objetivo,
+        ph: setpoints.ph.objetivo,
+        oxigeno: setpoints.oxigeno.objetivo,
+        amonio: setpoints.amonio.objetivo,
+        nitrito: setpoints.nitrito.objetivo,
+        nitrato: setpoints.nitrato.objetivo,
+      }
+    );
+  }, [datos, setpoints]);
+
+  // Datos normalizados para la matriz de 8 sensores IoT de Monitoreo
+  const sensorData: TelemetryData = useMemo(() => {
+    const flujoEstimado = actuadores.bomba ? +(18.5 + (Math.random() * 1.5 - 0.7)).toFixed(1) : 0;
+    const turbidezEstimada = actuadores.bomba ? +(3.8 + (Math.random() * 0.8)).toFixed(1) : 6.5;
+    const nivelEstimado = actuadores.bomba ? 92 : 85;
+    const ecEstimada = Math.round(1150 + lecturaActual.nitrato * 4.5);
+
+    return {
+      temperatura: +lecturaActual.temperatura.toFixed(1),
+      ph: +lecturaActual.ph.toFixed(1),
+      oxigeno: +lecturaActual.oxigeno.toFixed(1),
+      nivelAgua: nivelEstimado,
+      conductividad: ecEstimada,
+      turbidez: turbidezEstimada,
+      flujoBomba: flujoEstimado,
+      amonio: +lecturaActual.amonio.toFixed(2),
+    };
+  }, [lecturaActual, actuadores.bomba]);
+
+  const handleRegenerateData = () => {
+    setDatos(telemetryService.generarLecturasHistoricas(24, 6, setpoints));
   };
 
   const getStatus = (val: number, min: number, max: number): "ok" | "warn" | "danger" => {
@@ -94,86 +130,87 @@ const Monitoreo = () => {
     return "danger";
   };
 
+  // Matriz de sensores IoT con sus umbrales óptimos
   const sensors = [
     {
       id: "temp",
       module: "tanque",
       icon: <Thermometer className="h-6 w-6" />,
       label: "Temperatura Tanque",
-      value: data.temperatura,
+      value: sensorData.temperatura,
       unit: "°C",
-      range: "22 - 28 °C",
-      status: getStatus(data.temperatura, 22, 28),
+      range: `${setpoints.temperatura.min} - ${setpoints.temperatura.max} °C`,
+      status: getStatus(sensorData.temperatura, setpoints.temperatura.min, setpoints.temperatura.max),
     },
     {
       id: "ph",
       module: "agua",
       icon: <Droplets className="h-6 w-6" />,
       label: "pH del Agua",
-      value: data.ph,
+      value: sensorData.ph,
       unit: "",
-      range: "6.5 - 7.5",
-      status: getStatus(data.ph, 6.5, 7.5),
+      range: `${setpoints.ph.min} - ${setpoints.ph.max}`,
+      status: getStatus(sensorData.ph, setpoints.ph.min, setpoints.ph.max),
     },
     {
       id: "oxigeno",
       module: "tanque",
       icon: <Wind className="h-6 w-6" />,
       label: "Oxígeno Disuelto",
-      value: data.oxigeno,
+      value: sensorData.oxigeno,
       unit: "mg/L",
-      range: "5.0 - 8.0 mg/L",
-      status: getStatus(data.oxigeno, 5, 8),
+      range: `> ${setpoints.oxigeno.min} mg/L`,
+      status: getStatus(sensorData.oxigeno, setpoints.oxigeno.min, setpoints.oxigeno.max),
     },
     {
       id: "nivel",
       module: "agua",
       icon: <Gauge className="h-6 w-6" />,
       label: "Nivel de Agua",
-      value: data.nivelAgua,
+      value: sensorData.nivelAgua,
       unit: "%",
       range: "80 - 100 %",
-      status: getStatus(data.nivelAgua, 80, 100),
+      status: getStatus(sensorData.nivelAgua, 80, 100),
     },
     {
       id: "ec",
       module: "hidroponia",
       icon: <Zap className="h-6 w-6" />,
       label: "Conductividad (EC)",
-      value: data.conductividad,
+      value: sensorData.conductividad,
       unit: "µS/cm",
       range: "1000 - 1500",
-      status: getStatus(data.conductividad, 1000, 1500),
+      status: getStatus(sensorData.conductividad, 1000, 1500),
     },
     {
       id: "turbidez",
       module: "agua",
       icon: <Waves className="h-6 w-6" />,
       label: "Turbidez del Agua",
-      value: data.turbidez,
+      value: sensorData.turbidez,
       unit: "NTU",
       range: "< 10 NTU",
-      status: getStatus(data.turbidez, 0, 8),
+      status: getStatus(sensorData.turbidez, 0, 8),
     },
     {
       id: "flujo",
       module: "hidroponia",
       icon: <Activity className="h-6 w-6" />,
       label: "Flujo de Recirculación",
-      value: data.flujoBomba,
+      value: sensorData.flujoBomba,
       unit: "L/min",
       range: "15 - 22 L/min",
-      status: getStatus(data.flujoBomba, 15, 22),
+      status: actuadores.bomba ? getStatus(sensorData.flujoBomba, 15, 22) : "danger",
     },
     {
       id: "amonio",
       module: "tanque",
       icon: <Fish className="h-6 w-6" />,
       label: "Amonio Total (NH₃)",
-      value: data.amonio,
+      value: sensorData.amonio,
       unit: "ppm",
-      range: "< 0.5 ppm",
-      status: getStatus(data.amonio, 0, 0.4),
+      range: `< ${setpoints.amonio.max} ppm`,
+      status: getStatus(sensorData.amonio, 0, setpoints.amonio.max),
     },
   ];
 
@@ -184,51 +221,56 @@ const Monitoreo = () => {
 
   return (
     <Layout>
-      <div className="container py-16">
-        {/* Header section */}
+      <div className="container py-10 md:py-14">
+        {/* Cabecera Principal */}
         <motion.div
-          className="text-center mb-10"
-          initial={{ opacity: 0, y: -20 }}
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
-            <Radio className="h-4 w-4 animate-pulse text-primary" /> Estación Telemetría IoT — Semillero CEMOS UIS
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
+            <Radio className="h-4 w-4 animate-pulse text-primary" /> Estación Telemetría IoT & Gemelo Digital — Semillero CEMOS UIS
           </div>
-          <h1 className="font-display text-4xl font-bold text-foreground mb-4">
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
             Monitoreo en Tiempo Real
           </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
-            Supervisa los datos de los sensores IoT del sistema acuapónico y controla los actuadores del prototipo.
+          <p className="text-muted-foreground max-w-3xl mx-auto text-sm md:text-base leading-relaxed">
+            Supervisa en vivo el diagrama de flujo del tanque, analiza los sensores IoT de cada subsistema y opera actuadores y consignas desde el dock lateral con bitácora técnica.
           </p>
         </motion.div>
 
-        {/* Live Status Bar */}
-        <div className="glass-card p-4 mb-8 flex flex-wrap items-center justify-between gap-4 max-w-5xl mx-auto">
+        {/* Barra de Estado IoT */}
+        <div className="glass-card p-4 mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
             </span>
             <div>
-              <p className="text-xs font-medium text-foreground">Estado del Sistema: <span className="text-primary font-bold">ONLINE</span></p>
-              <p className="text-xs text-muted-foreground">Última actualización: {lastUpdated || "Cargando..."}</p>
+              <p className="text-xs font-medium text-foreground">
+                Estado del Sistema: <span className="text-primary font-bold">ONLINE</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Última actualización: {lastUpdated || "Actualizando..."}
+              </p>
             </div>
           </div>
 
-          {/* Module Filter buttons */}
+          {/* Filtros de Módulo de Sensores */}
           <div className="flex items-center gap-1 bg-muted p-1 rounded-lg text-xs">
             {[
-              { id: "todos", label: "Todos" },
+              { id: "todos", label: "Todos los Módulos" },
               { id: "tanque", label: "Tanque Peces" },
               { id: "hidroponia", label: "Camas Cultivo" },
               { id: "agua", label: "Calidad Agua" },
             ].map((mod) => (
               <button
                 key={mod.id}
+                type="button"
                 onClick={() => setSelectedModule(mod.id)}
                 className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
                   selectedModule === mod.id
-                    ? "bg-card text-foreground shadow-sm"
+                    ? "bg-card text-foreground shadow-sm font-semibold"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -238,171 +280,202 @@ const Monitoreo = () => {
           </div>
         </div>
 
-        {/* Grid of Sensors */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-12">
-          {filteredSensors.map((s) => (
-            <motion.div
-              key={s.id}
-              className="glass-card p-5 flex flex-col justify-between"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+        {/* =========================================================================
+            LAYOUT PRINCIPAL: ÁREA CENTRAL DE PROCESO + PANEL LATERAL ZERO-SCROLL
+           ========================================================================= */}
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* COLUMNA PRINCIPAL: GEMELO DIGITAL, SENSORES Y TELEMETRÍA (8 de 12 cols) */}
+          <div className="lg:col-span-8 space-y-8">
+            {/* AÑADIDO PRINCIPAL: DIAGRAMA INTERACTIVO DEL TANQUE (GEMELO DIGITAL 2D) */}
+            <motion.section
+              className="space-y-3"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div
-                  className={`h-11 w-11 rounded-xl flex items-center justify-center ${
-                    s.status === "ok"
-                      ? "bg-primary/10 text-primary"
-                      : s.status === "warn"
-                      ? "bg-accent/20 text-accent-foreground"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {s.icon}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-5 w-5 text-primary" />
+                  <h2 className="font-display font-bold text-lg text-foreground">
+                    Diagrama del Sistema & Gemelo Digital
+                  </h2>
                 </div>
-                <span
-                  className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full ${
-                    s.status === "ok"
-                      ? "bg-primary/10 text-primary"
-                      : s.status === "warn"
-                      ? "bg-accent/20 text-accent-foreground"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {s.status === "ok" ? "Óptimo" : s.status === "warn" ? "Alerta" : "Crítico"}
+                <span className="text-[11px] text-muted-foreground hidden sm:inline-block">
+                  Sincronizado con actuadores y sensores en tiempo real
                 </span>
               </div>
 
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="font-display font-bold text-2xl text-foreground">
-                    {s.value}
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {s.unit}
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground/70">Rango ideal: {s.range}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              <DiagramaSistema
+                lectura={lecturaActual}
+                setpoints={setpoints}
+                actuadores={actuadores}
+                onToggleActuador={handleToggleActuador}
+                onOpenSetpoints={() => {
+                  // Acceso directo a calibración de consignas
+                }}
+              />
+            </motion.section>
 
-        {/* Actuators & Control Panel */}
-        <motion.div
-          className="glass-card p-8 max-w-5xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <Power className="h-6 w-6 text-primary" />
-            <div>
-              <h2 className="font-display font-bold text-xl text-foreground">Panel de Control de Actuadores</h2>
-              <p className="text-xs text-muted-foreground">Simula la activación o apagado remoto de los relés del sistema IoT</p>
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                key: "bombaPrincipal" as const,
-                label: "Bomba Principal",
-                desc: "Recirculación de agua 24W",
-                icon: <RefreshCw className="h-5 w-5" />,
-              },
-              {
-                key: "oxigenador" as const,
-                label: "Soplador Oxígeno",
-                desc: "Aireador estanque de peces",
-                icon: <Wind className="h-5 w-5" />,
-              },
-              {
-                key: "alimentadorAuto" as const,
-                label: "Alimentador Auto",
-                desc: "Dispensador temporizado",
-                icon: <Fish className="h-5 w-5" />,
-              },
-              {
-                key: "luzUV" as const,
-                label: "Clarificador UV",
-                desc: "Lámpara germicida agua",
-                icon: <Sun className="h-5 w-5" />,
-              },
-            ].map((act) => {
-              const active = actuators[act.key];
-              return (
-                <div
-                  key={act.key}
-                  className={`p-4 rounded-xl border transition-all ${
-                    active
-                      ? "border-primary/50 bg-primary/5 shadow-sm"
-                      : "border-border bg-muted/40"
+            {/* BARRA DE SUB-PESTAÑAS DE MONITOREO CENTRAL */}
+            <div className="flex items-center justify-between border-b border-border/60 pb-2 pt-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVistaCentral("sensores")}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    vistaCentral === "sensores"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div
-                      className={`h-9 w-9 rounded-lg flex items-center justify-center ${
-                        active
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {act.icon}
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        active
-                          ? "bg-primary/20 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {active ? "ENCENDIDO" : "APAGADO"}
-                    </span>
-                  </div>
+                  <Activity className="h-4 w-4" />
+                  <span>Matriz de Sensores ({filteredSensors.length})</span>
+                </button>
 
-                  <h3 className="font-display font-semibold text-sm text-foreground mb-1">
-                    {act.label}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-4">{act.desc}</p>
+                <button
+                  type="button"
+                  onClick={() => setVistaCentral("graficas")}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    vistaCentral === "graficas"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <ChartIcon className="h-4 w-4" />
+                  <span>Telemetría Temporal (24h)</span>
+                </button>
 
-                  <Button
-                    size="sm"
-                    variant={active ? "outline" : "default"}
-                    className={`w-full text-xs font-semibold ${
-                      !active ? "gradient-nature border-0 text-primary-foreground" : ""
-                    }`}
-                    onClick={() => toggleActuator(act.key)}
+                <button
+                  type="button"
+                  onClick={() => setVistaCentral("csv")}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    vistaCentral === "csv"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <TableIcon className="h-4 w-4" />
+                  <span>Registro CSV</span>
+                </button>
+              </div>
+
+              <span className="text-[11px] text-muted-foreground hidden md:inline-block">
+                Ciclo: 3.5s
+              </span>
+            </div>
+
+            {/* VISTA 1: MATRIZ DE SENSORES EN TIEMPO REAL (COMPONENTES ORIGINALES DE MONITOREO) */}
+            {vistaCentral === "sensores" && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {filteredSensors.map((s) => (
+                  <motion.div
+                    key={s.id}
+                    className="glass-card p-4 flex flex-col justify-between"
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.25 }}
                   >
-                    {active ? "Desactivar" : "Activar"}
-                  </Button>
+                    <div className="flex items-start justify-between mb-3">
+                      <div
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                          s.status === "ok"
+                            ? "bg-primary/10 text-primary"
+                            : s.status === "warn"
+                            ? "bg-accent/20 text-accent-foreground"
+                            : "bg-destructive/10 text-destructive"
+                        }`}
+                      >
+                        {s.icon}
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full tracking-wider ${
+                          s.status === "ok"
+                            ? "bg-primary/15 text-primary"
+                            : s.status === "warn"
+                            ? "bg-accent/20 text-accent-foreground"
+                            : "bg-destructive/15 text-destructive"
+                        }`}
+                      >
+                        {s.status === "ok" ? "Óptimo" : s.status === "warn" ? "Alerta" : "Crítico"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1 line-clamp-1">{s.label}</p>
+                      <div className="flex items-baseline gap-1 mb-1.5">
+                        <span className="font-display font-bold text-2xl text-foreground">
+                          {s.value}
+                        </span>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {s.unit}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/70">Ideal: {s.range}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* VISTA 2: GRÁFICAS DE TELEMETRÍA (CONSOLIDADA DE SIMULACIÓN A MONITOREO) */}
+            {vistaCentral === "graficas" && (
+              <div className="space-y-6">
+                <GraficasDia
+                  datos={datos}
+                  setpoints={setpoints}
+                  isSimRunning={isSimRunning}
+                  onToggleSim={() => setIsSimRunning((r) => !r)}
+                  onRegenerateData={handleRegenerateData}
+                />
+              </div>
+            )}
+
+            {/* VISTA 3: REGISTRO HISTÓRICO Y TABLA CSV */}
+            {vistaCentral === "csv" && (
+              <div className="space-y-6">
+                <TablaLecturas datos={datos} setpoints={setpoints} />
+              </div>
+            )}
+
+            {/* RESUMEN DE SALUD Y DIAGNÓSTICO (COMPONENTES ORIGINALES DE MONITOREO) */}
+            <div className="grid sm:grid-cols-2 gap-4 pt-2">
+              <div className="glass-card p-5 flex items-start gap-3.5">
+                <CheckCircle2 className="h-7 w-7 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-display font-semibold text-sm text-foreground mb-1">
+                    Diagnóstico Automático
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Todos los parámetros del ciclo del nitrógeno (Amonio, Nitritos y Nitratos) se encuentran dentro del umbral ideal para Tilapia Roja y Lechuga Hidropónica.
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        </motion.div>
+              </div>
 
-        {/* System Health Summary */}
-        <div className="mt-8 max-w-5xl mx-auto grid sm:grid-cols-2 gap-4">
-          <div className="glass-card p-6 flex items-start gap-4">
-            <CheckCircle2 className="h-8 w-8 text-primary shrink-0 mt-1" />
-            <div>
-              <h4 className="font-display font-semibold text-foreground mb-1">Diagnóstico Automático</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Todos los parámetros del ciclo del nitrógeno (Amonio, Nitritos y Nitratos) se encuentran dentro del umbral ideal para Tilapia Roja y Lechuga Hidropónica.
-              </p>
+              <div className="glass-card p-5 flex items-start gap-3.5">
+                <AlertTriangle className="h-7 w-7 text-accent shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-display font-semibold text-sm text-foreground mb-1">
+                    Mantenimiento Sugerido
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Próxima limpieza de sedimentadores y cambio parcial del 5% del volumen de agua programada en 48 horas.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="glass-card p-6 flex items-start gap-4">
-            <AlertTriangle className="h-8 w-8 text-accent shrink-0 mt-1" />
-            <div>
-              <h4 className="font-display font-semibold text-foreground mb-1">Mantenimiento Sugerido</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Próxima limpieza de sedimentadores y cambio parcial del 5% del volumen de agua programada en 48 horas.
-              </p>
-            </div>
+          {/* =========================================================================
+              COLUMNA LATERAL: DOCK DE ACTUADORES, SETPOINTS Y BITÁCORA DE NOTAS (4 cols)
+              Acceso rápido sin necesidad de desplazamiento vertical (Zero-Scroll)
+             ========================================================================= */}
+          <div className="lg:col-span-4 lg:sticky lg:top-20">
+            <PanelLateralControl
+              actuadores={actuadores}
+              onToggleActuador={handleToggleActuador}
+              setpoints={setpoints}
+              onChangeSetpoints={setSetpoints}
+              onResetSetpoints={() => setSetpoints(DEFAULT_SETPOINTS)}
+            />
           </div>
         </div>
       </div>
