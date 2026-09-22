@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Comparativa from "./pages/Comparativa";
 import Juego from "./pages/Juego";
-import Simulador from "./pages/Simulador";
+import Simulador from "./pages/Simulacion";
 import Monitoreo from "./pages/Monitoreo";
 import NotFound from "./pages/NotFound";
 
