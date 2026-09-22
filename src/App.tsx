@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Comparativa from "./pages/Comparativa";
 import Juego from "./pages/Juego";
-import Simulacion from "./pages/Simulacion";
+import Simulador from "./pages/Simulador";
 import Monitoreo from "./pages/Monitoreo";
 import NotFound from "./pages/NotFound";
 
@@ -22,7 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/comparativa" element={<Comparativa />} />
           <Route path="/juego" element={<Juego />} />
-          <Route path="/simulacion" element={<Simulacion />} />
+          <Route path="/simulador" element={<Simulador />} />
           <Route path="/monitoreo" element={<Monitoreo />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -33,11 +33,6 @@ const Footer = () => (
                 url: "https://www.instagram.com/cemos_uis?igsi=MTM1cWIzcnZha2NoMw==",
                 icon: FaInstagram,
               },
-              {
-                name: "YouTube",
-                url: "https://www.youtube.com/watch?v=QL72fPF1Bu0",
-                icon: FaYoutube,
-              },
             ].map((social) => {
               const Icon = social.icon;
 

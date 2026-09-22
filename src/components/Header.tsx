@@ -8,7 +8,7 @@ const navItems = [
   { label: "Inicio", path: "/" },
   { label: "Comparativa", path: "/comparativa" },
   { label: "Minijuego", path: "/juego" },
-  { label: "Simulación", path: "/simulacion" },
+  { label: "Simulador", path: "/simulador" },
   { label: "Monitoreo", path: "/monitoreo" },
 ];
 

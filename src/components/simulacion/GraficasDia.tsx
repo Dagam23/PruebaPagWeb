@@ -23,6 +23,7 @@ import type { Lectura } from "@/services/telemetryService";
 import { Clock, Grid, Layers, Play, Pause, RotateCw } from "lucide-react";
 
 const INTERVALOS = [
+  { id: "5m", label: "5 min", ms: 5 * 60 * 1000 },
   { id: "15m", label: "15 min", ms: 15 * 60 * 1000 },
   { id: "1h", label: "1 hora", ms: 60 * 60 * 1000 },
   { id: "6h", label: "6 horas", ms: 6 * 60 * 60 * 1000 },

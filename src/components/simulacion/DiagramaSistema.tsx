@@ -97,9 +97,7 @@ const PUNTOS: Punto[] = [
 export interface ActuadoresState {
   bomba: boolean;
   aireador: boolean;
-  alimentador: boolean;
   luz: boolean;
-  calentador?: boolean;
 }
 
 interface DiagramaSistemaProps {
@@ -113,7 +111,7 @@ interface DiagramaSistemaProps {
 export function DiagramaSistema({
   lectura,
   setpoints = DEFAULT_SETPOINTS,
-  actuadores = { bomba: true, aireador: true, alimentador: false, luz: true, calentador: false },
+  actuadores = { bomba: true, aireador: true, luz: true },
   onToggleActuador,
   onOpenSetpoints,
 }: DiagramaSistemaProps) {
@@ -163,6 +161,21 @@ export function DiagramaSistema({
           role="img"
           aria-label="Diagrama del prototipo acuapónico con ubicación de sensores y actuadores"
         >
+                    <style>
+            {`
+              @keyframes flow {
+                to { stroke-dashoffset: -20; }
+              }
+              .pipe-flow {
+                stroke-dasharray: 10 5;
+                animation: flow 1.2s linear infinite;
+              }
+              .pipe-flow-reverse {
+                stroke-dasharray: 10 5;
+                animation: flow 2s linear infinite reverse;
+              }
+            `}
+          </style>
           <defs>
             <marker
               id="flecha-sis"
@@ -499,6 +512,7 @@ export function DiagramaSistema({
             fill="none"
             stroke="var(--color-aqua)"
             strokeWidth="3"
+            className="pipe-flow"
             markerEnd="url(#flecha-sis)"
           />
           {/* Cultivo -> Tanque (Retorno por gravedad) */}

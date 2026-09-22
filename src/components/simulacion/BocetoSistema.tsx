@@ -42,6 +42,34 @@ export function BocetoSistema({
         role="img"
         aria-label={`Boceto del sistema acuapónico: tanque de ${volumenL} litros con ${peces} peces, cama de cultivo de ${areaCultivoM2} metros cuadrados y bomba de ${caudalLh} litros por hora.`}
       >
+                <style>
+          {`
+            @keyframes dash-flow {
+              to { stroke-dashoffset: -20; }
+            }
+            .flow-line {
+              stroke-dasharray: 10 5;
+              animation: dash-flow 1s linear infinite;
+            }
+            .return-line {
+              stroke-dasharray: 8 6;
+              animation: dash-flow 2s linear infinite reverse;
+            }
+            @keyframes bubbles {
+              0% { transform: translateY(0) scale(1); opacity: 0.5; }
+              100% { transform: translateY(-20px) scale(1.5); opacity: 0; }
+            }
+            .bubble {
+              animation: bubbles 2s ease-in infinite;
+            }
+            .bubble-2 {
+              animation-delay: 0.5s;
+            }
+            .bubble-3 {
+              animation-delay: 1s;
+            }
+          `}
+        </style>
         <defs>
           <marker
             id="flecha-boceto"
@@ -134,6 +162,9 @@ export function BocetoSistema({
         >
           Aireador
         </text>
+        <circle cx="60" cy="120" r="2" fill="var(--color-chart-3)" className="bubble" />
+        <circle cx="55" cy="125" r="1.5" fill="var(--color-chart-3)" className="bubble bubble-2" />
+        <circle cx="65" cy="118" r="2.5" fill="var(--color-chart-3)" className="bubble bubble-3" />
         <path
           d="M60 164 L60 250"
           stroke="var(--color-chart-3)"
@@ -291,6 +322,7 @@ export function BocetoSistema({
           stroke="var(--color-aqua)"
           strokeWidth="3"
           markerEnd="url(#flecha-boceto)"
+          className="flow-line"
         />
         <text
           x="628"
@@ -311,6 +343,7 @@ export function BocetoSistema({
           strokeWidth="3"
           strokeDasharray="7 5"
           markerEnd="url(#flecha-boceto)"
+          className="flow-line"
         />
         <text
           x="196"
@@ -329,18 +362,21 @@ export function BocetoSistema({
           stroke="var(--color-aqua)"
           strokeWidth="3"
           markerEnd="url(#flecha-boceto)"
+          className="flow-line"
         />
         <path
           d="M320 235 L343 235"
           stroke="var(--color-aqua)"
           strokeWidth="3"
           markerEnd="url(#flecha-boceto)"
+          className="flow-line"
         />
         <path
           d="M435 235 L458 235"
           stroke="var(--color-aqua)"
           strokeWidth="3"
           markerEnd="url(#flecha-boceto)"
+          className="flow-line"
         />
 
         <text

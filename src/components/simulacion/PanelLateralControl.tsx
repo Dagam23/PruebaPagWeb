@@ -170,24 +170,8 @@ export function PanelLateralControl({
       activo: actuadores.aireador,
       color: "text-cyan-500",
     },
-    {
-      key: "calentador" as const,
-      nombre: "Termostato Calentador",
-      desc: "Mantiene temperatura del agua",
-      potencia: "50W · 110V",
-      icono: Thermometer,
-      activo: actuadores.calentador ?? false,
-      color: "text-red-500",
-    },
-    {
-      key: "alimentador" as const,
-      nombre: "Alimentador Auto",
-      desc: "Tolva de pellets temporizada",
-      potencia: "5W · Servo",
-      icono: Fish,
-      activo: actuadores.alimentador,
-      color: "text-amber-500",
-    },
+    
+    
     {
       key: "luz" as const,
       nombre: "Clarificador UV / Luz",

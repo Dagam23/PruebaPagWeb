@@ -1,0 +1,16 @@
+<USER_REQUEST>
+Mira quiero que asi sea ahora el inicio de mi pagina, quita la red social de youtube quitala del pedazo de abajo la de simulador quiero que este asi y en la de monitoreo 
+Temperatura ambiental 
+Humeadd Ambiental
+Temperatura Agua
+PH Agua
+ODis H20
+
+Quiero que solo esten estos sensores quiero que mejores la grafica para que funcione mejor la que representa el sistema acuaponico y en actuadores solo deja el de aire el de la bomba de recirculacion del agua y la iluminacion los cambios solo hazlos local deja que yo los suba y pon que en los hisotgramas la opcion 5 min 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-22T09:45:06-05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 3.1 Pro (High). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

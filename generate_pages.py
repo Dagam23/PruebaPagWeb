@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import os
+
+index_content = """import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -428,3 +430,7 @@ const Index = () => {
 };
 
 export default Index;
+"""
+
+with open('src/pages/Index.tsx', 'w') as f:
+    f.write(index_content)
