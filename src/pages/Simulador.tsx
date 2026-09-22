@@ -15,7 +15,6 @@ import Layout from "@/components/Layout";
 import { BocetoSistema } from "@/components/simulacion/BocetoSistema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -96,9 +95,9 @@ const Simulador = () => {
 
             {NUMERICOS.map((c) => (
               <div key={c.id} className="space-y-1.5">
-                <Label htmlFor={c.id}>
+                <label htmlFor={c.id} className="text-sm font-medium text-foreground block">
                   {c.label} <span className="text-muted-foreground">({c.unidad})</span>
-                </Label>
+                </label>
                 <Input
                   id={c.id}
                   type="number"
@@ -111,7 +110,9 @@ const Simulador = () => {
             ))}
 
             <div className="space-y-1.5">
-              <Label htmlFor="tipoPez">Tipo de pez</Label>
+              <label htmlFor="tipoPez" className="text-sm font-medium text-foreground block">
+                Tipo de pez
+              </label>
               <Select value={entrada.tipoPez} onValueChange={(v) => set("tipoPez", v)}>
                 <SelectTrigger id="tipoPez"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -123,7 +124,9 @@ const Simulador = () => {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="tipoCultivo">Tipo de cultivo</Label>
+              <label htmlFor="tipoCultivo" className="text-sm font-medium text-foreground block">
+                Tipo de cultivo
+              </label>
               <Select value={entrada.tipoCultivo} onValueChange={(v) => set("tipoCultivo", v)}>
                 <SelectTrigger id="tipoCultivo"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -135,7 +138,9 @@ const Simulador = () => {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="objetivo">Objetivo</Label>
+              <label htmlFor="objetivo" className="text-sm font-medium text-foreground block">
+                Objetivo
+              </label>
               <Select value={entrada.objetivo} onValueChange={(v) => set("objetivo", v)}>
                 <SelectTrigger id="objetivo"><SelectValue /></SelectTrigger>
                 <SelectContent>
