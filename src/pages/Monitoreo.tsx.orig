@@ -31,11 +31,14 @@ import { DEFAULT_SETPOINTS, SetpointConfig } from "@/lib/constants";
 import { telemetryService, type Lectura } from "@/services/telemetryService";
 
 interface TelemetryData {
-  temperaturaAmbiente: number;
-  humedadAmbiente: number;
-  temperaturaAgua: number;
-  phAgua: number;
-  odis: number;
+  temperatura: number;
+  ph: number;
+  oxigeno: number;
+  nivelAgua: number;
+  conductividad: number;
+  turbidez: number;
+  flujoBomba: number;
+  amonio: number;
 }
 
 const Monitoreo = () => {
@@ -46,7 +49,9 @@ const Monitoreo = () => {
   const [actuadores, setActuadores] = useState<ActuadoresState>({
     bomba: true,
     aireador: true,
+    alimentador: false,
     luz: true,
+    calentador: false,
   });
 
   const handleToggleActuador = (key: keyof ActuadoresState) => {
@@ -98,12 +103,20 @@ const Monitoreo = () => {
 
   // Datos normalizados para la matriz de 8 sensores IoT de Monitoreo
   const sensorData: TelemetryData = useMemo(() => {
+    const flujoEstimado = actuadores.bomba ? +(18.5 + (Math.random() * 1.5 - 0.7)).toFixed(1) : 0;
+    const turbidezEstimada = actuadores.bomba ? +(3.8 + (Math.random() * 0.8)).toFixed(1) : 6.5;
+    const nivelEstimado = actuadores.bomba ? 92 : 85;
+    const ecEstimada = Math.round(1150 + lecturaActual.nitrato * 4.5);
+
     return {
-      temperaturaAmbiente: +(24 + Math.random() * 2).toFixed(1),
-      humedadAmbiente: +(65 + Math.random() * 5).toFixed(1),
-      temperaturaAgua: +lecturaActual.temperatura.toFixed(1),
-      phAgua: +lecturaActual.ph.toFixed(1),
-      odis: +lecturaActual.oxigeno.toFixed(1),
+      temperatura: +lecturaActual.temperatura.toFixed(1),
+      ph: +lecturaActual.ph.toFixed(1),
+      oxigeno: +lecturaActual.oxigeno.toFixed(1),
+      nivelAgua: nivelEstimado,
+      conductividad: ecEstimada,
+      turbidez: turbidezEstimada,
+      flujoBomba: flujoEstimado,
+      amonio: +lecturaActual.amonio.toFixed(2),
     };
   }, [lecturaActual, actuadores.bomba]);
 
@@ -120,55 +133,85 @@ const Monitoreo = () => {
   // Matriz de sensores IoT con sus umbrales óptimos
   const sensors = [
     {
-      id: "tempAmbiente",
-      module: "ambiente",
-      icon: <Thermometer className="h-6 w-6" />,
-      label: "Temperatura ambiental",
-      value: sensorData.temperaturaAmbiente,
-      unit: "°C",
-      range: "20 - 30 °C",
-      status: getStatus(sensorData.temperaturaAmbiente, 20, 30),
-    },
-    {
-      id: "humedadAmbiente",
-      module: "ambiente",
-      icon: <Wind className="h-6 w-6" />,
-      label: "Humedad Ambiental",
-      value: sensorData.humedadAmbiente,
-      unit: "%",
-      range: "50 - 80 %",
-      status: getStatus(sensorData.humedadAmbiente, 50, 80),
-    },
-    {
-      id: "tempAgua",
+      id: "temp",
       module: "tanque",
       icon: <Thermometer className="h-6 w-6" />,
-      label: "Temperatura Agua",
-      value: sensorData.temperaturaAgua,
+      label: "Temperatura Tanque",
+      value: sensorData.temperatura,
       unit: "°C",
       range: `${setpoints.temperatura.min} - ${setpoints.temperatura.max} °C`,
-      status: getStatus(sensorData.temperaturaAgua, setpoints.temperatura.min, setpoints.temperatura.max),
+      status: getStatus(sensorData.temperatura, setpoints.temperatura.min, setpoints.temperatura.max),
     },
     {
-      id: "phAgua",
+      id: "ph",
       module: "agua",
       icon: <Droplets className="h-6 w-6" />,
-      label: "PH Agua",
-      value: sensorData.phAgua,
+      label: "pH del Agua",
+      value: sensorData.ph,
       unit: "",
       range: `${setpoints.ph.min} - ${setpoints.ph.max}`,
-      status: getStatus(sensorData.phAgua, setpoints.ph.min, setpoints.ph.max),
+      status: getStatus(sensorData.ph, setpoints.ph.min, setpoints.ph.max),
     },
     {
-      id: "odisH2o",
+      id: "oxigeno",
       module: "tanque",
       icon: <Wind className="h-6 w-6" />,
-      label: "ODis H20",
-      value: sensorData.odis,
+      label: "Oxígeno Disuelto",
+      value: sensorData.oxigeno,
       unit: "mg/L",
       range: `> ${setpoints.oxigeno.min} mg/L`,
-      status: getStatus(sensorData.odis, setpoints.oxigeno.min, setpoints.oxigeno.max),
-    }
+      status: getStatus(sensorData.oxigeno, setpoints.oxigeno.min, setpoints.oxigeno.max),
+    },
+    {
+      id: "nivel",
+      module: "agua",
+      icon: <Gauge className="h-6 w-6" />,
+      label: "Nivel de Agua",
+      value: sensorData.nivelAgua,
+      unit: "%",
+      range: "80 - 100 %",
+      status: getStatus(sensorData.nivelAgua, 80, 100),
+    },
+    {
+      id: "ec",
+      module: "hidroponia",
+      icon: <Zap className="h-6 w-6" />,
+      label: "Conductividad (EC)",
+      value: sensorData.conductividad,
+      unit: "µS/cm",
+      range: "1000 - 1500",
+      status: getStatus(sensorData.conductividad, 1000, 1500),
+    },
+    {
+      id: "turbidez",
+      module: "agua",
+      icon: <Waves className="h-6 w-6" />,
+      label: "Turbidez del Agua",
+      value: sensorData.turbidez,
+      unit: "NTU",
+      range: "< 10 NTU",
+      status: getStatus(sensorData.turbidez, 0, 8),
+    },
+    {
+      id: "flujo",
+      module: "hidroponia",
+      icon: <Activity className="h-6 w-6" />,
+      label: "Flujo de Recirculación",
+      value: sensorData.flujoBomba,
+      unit: "L/min",
+      range: "15 - 22 L/min",
+      status: actuadores.bomba ? getStatus(sensorData.flujoBomba, 15, 22) : "danger",
+    },
+    {
+      id: "amonio",
+      module: "tanque",
+      icon: <Fish className="h-6 w-6" />,
+      label: "Amonio Total (NH₃)",
+      value: sensorData.amonio,
+      unit: "ppm",
+      range: `< ${setpoints.amonio.max} ppm`,
+      status: getStatus(sensorData.amonio, 0, setpoints.amonio.max),
+    },
   ];
 
   const filteredSensors =
